@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mini Market DB Project — FCI Tanta University</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0e1a;
+      --surface: #0f1628;
+      --card: #141c35;
+      --accent: #00d4ff;
+      --accent2: #7c3aed;
+      --accent3: #10b981;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --border: #1e2d4a;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    #bg-canvas {
+      position: fixed; inset: 0; z-index: 0;
+      opacity: 0.35; pointer-events: none;
+    }
+
+    .grid-overlay {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    .wrapper { position: relative; z-index: 1; }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.2rem 3rem;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(16px);
+      background: rgba(10,14,26,0.85);
+      position: sticky; top: 0; z-index: 100;
+    }
+
+    .nav-logo {
+      display: flex; align-items: center; gap: 0.7rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem; color: var(--accent); letter-spacing: 0.05em;
+    }
+
+    .nav-logo svg { width: 28px; height: 28px; }
+
+    .nav-badge {
+      font-family: 'Space Mono', monospace; font-size: 0.7rem;
+      color: var(--accent3); border: 1px solid var(--accent3);
+      padding: 0.2rem 0.6rem; border-radius: 2px; letter-spacing: 0.1em;
+      animation: pulse-border 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-border {
+      0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+      50%      { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 88vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 4rem 2rem 2rem;
+    }
+
+    .hero-tag {
+      font-family: 'Space Mono', monospace; font-size: 0.75rem;
+      letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase;
+      margin-bottom: 1.5rem; opacity: 0;
+      animation: fadeUp 0.8s ease forwards 0.2s;
+    }
+
+    .hero-title {
+      font-size: clamp(2.5rem, 7vw, 5.5rem); font-weight: 800;
+      line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 1.2rem;
+      opacity: 0; animation: fadeUp 0.8s ease forwards 0.4s;
+    }
+
+    .hero-title .line1 { display: block; color: var(--text); }
+    .hero-title .line2 {
+      display: block;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: 1.05rem; color: var(--muted); max-width: 560px;
+      line-height: 1.7; margin-bottom: 2.5rem;
+      opacity: 0; animation: fadeUp 0.8s ease forwards 0.6s;
+    }
+
+    .hero-cta {
+      display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+      opacity: 0; animation: fadeUp 0.8s ease forwards 0.8s;
+    }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: linear-gradient(135deg, var(--accent), #0099cc);
+      color: #000; font-weight: 700; font-family: 'Syne', sans-serif;
+      font-size: 0.9rem; padding: 0.85rem 2rem; border: none;
+      border-radius: 4px; cursor: pointer; text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s; letter-spacing: 0.03em;
+    }
+
+    .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,212,255,0.35); }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: transparent; color: var(--text); font-weight: 600;
+      font-family: 'Syne', sans-serif; font-size: 0.9rem;
+      padding: 0.85rem 2rem; border: 1px solid var(--border);
+      border-radius: 4px; cursor: pointer; text-decoration: none;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .btn-secondary:hover { border-color: var(--accent2); transform: translateY(-3px); }
+
+    .hero-chips {
+      display: flex; gap: 0.7rem; flex-wrap: wrap; justify-content: center;
+      margin-top: 2.5rem; opacity: 0;
+      animation: fadeUp 0.8s ease forwards 1s;
+    }
+
+    .chip {
+      font-family: 'Space Mono', monospace; font-size: 0.7rem;
+      padding: 0.3rem 0.8rem; border-radius: 2px; border: 1px solid; letter-spacing: 0.08em;
+    }
+
+    .chip-blue   { border-color: var(--accent);  color: var(--accent);  background: rgba(0,212,255,0.07); }
+    .chip-purple { border-color: var(--accent2); color: var(--accent2); background: rgba(124,58,237,0.07); }
+    .chip-green  { border-color: var(--accent3); color: var(--accent3); background: rgba(16,185,129,0.07); }
+
+    .section-divider {
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
+
+    section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+
+    .section-label {
+      font-family: 'Space Mono', monospace; font-size: 0.7rem;
+      letter-spacing: 0.25em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 0.8rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800;
+      letter-spacing: -0.02em; margin-bottom: 0.5rem;
+    }
+
+    .section-desc {
+      color: var(--muted); font-size: 1rem; max-width: 520px;
+      line-height: 1.7; margin-bottom: 3rem;
+    }
+
+    /* VIEWER */
+    .viewer-section { padding: 5rem 2rem; max-width: 1200px; margin: 0 auto; }
+
+    .tabs {
+      display: flex; gap: 0;
+      margin-bottom: 0; border-bottom: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 1rem 2rem; background: transparent; border: none;
+      border-bottom: 3px solid transparent;
+      color: var(--muted); font-family: 'Syne', sans-serif;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      position: relative; bottom: -1px; letter-spacing: 0.02em;
+    }
+
+    .tab-btn .tab-icon { font-size: 1.1rem; }
+    .tab-btn:hover { color: var(--text); }
+
+    .tab-btn.active        { color: var(--accent);  border-bottom-color: var(--accent); }
+    .tab-btn.active-purple { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+    .tab-num {
+      font-family: 'Space Mono', monospace; font-size: 0.65rem;
+      padding: 0.15rem 0.4rem; border-radius: 2px; background: var(--border);
+    }
+
+    .iframe-wrapper {
+      position: relative; width: 100%;
+      background: var(--card); border: 1px solid var(--border);
+      border-top: none; border-radius: 0 0 8px 8px; overflow: hidden;
+    }
+
+    .iframe-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.7rem 1.2rem; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .iframe-dots { display: flex; gap: 6px; }
+    .iframe-dots span { width: 10px; height: 10px; border-radius: 50%; }
+    .iframe-dots .d1 { background: #ef4444; }
+    .iframe-dots .d2 { background: #f59e0b; }
+    .iframe-dots .d3 { background: #10b981; }
+
+    .iframe-url {
+      font-family: 'Space Mono', monospace; font-size: 0.68rem;
+      color: var(--muted); letter-spacing: 0.04em;
+      flex: 1; text-align: center; margin: 0 1rem;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .iframe-reload {
+      font-family: 'Space Mono', monospace; font-size: 0.65rem;
+      color: var(--muted); cursor: pointer;
+      border: 1px solid var(--border); padding: 0.2rem 0.6rem;
+      border-radius: 2px; background: transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .iframe-reload:hover { color: var(--accent); border-color: var(--accent); }
+
+    .viewer-frame {
+      display: none; width: 100%; height: 820px; border: none;
+    }
+
+    .viewer-frame.active { display: block; }
+
+    .frame-loading {
+      display: none; align-items: center; justify-content: center;
+      height: 820px; flex-direction: column; gap: 1rem;
+    }
+
+    .frame-loading.show { display: flex; }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem; color: var(--muted); letter-spacing: 0.1em;
+    }
+
+    /* TEAM */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+
+    .team-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1.5rem 1rem; text-align: center;
+      transition: transform 0.3s; position: relative; overflow: hidden;
+    }
+
+    .team-card::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transform: scaleX(0); transition: transform 0.3s;
+    }
+
+    .team-card:hover { transform: translateY(-4px); }
+    .team-card:hover::after { transform: scaleX(1); }
+
+    .team-avatar {
+      width: 60px; height: 60px; border-radius: 50%;
+      margin: 0 auto 1rem;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 800;
+    }
+
+    .av1 { background: linear-gradient(135deg,#00d4ff,#0099cc); color:#000; }
+    .av2 { background: linear-gradient(135deg,#7c3aed,#5b21b6); color:#fff; }
+    .av3 { background: linear-gradient(135deg,#10b981,#059669); color:#000; }
+    .av4 { background: linear-gradient(135deg,#f59e0b,#d97706); color:#000; }
+    .av5 { background: linear-gradient(135deg,#ef4444,#dc2626); color:#fff; }
+
+    .team-name { font-size: 0.88rem; font-weight: 700; }
+    .team-role {
+      font-family: 'Space Mono', monospace; font-size: 0.65rem;
+      color: var(--muted); margin-top: 0.3rem; letter-spacing: 0.08em;
+    }
+
+    /* UNIVERSITY */
+    .uni-section { padding: 4rem 2rem; max-width: 1100px; margin: 0 auto; }
+
+    .uni-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 3rem;
+      display: flex; align-items: center; gap: 2rem;
+      position: relative; overflow: hidden;
+    }
+
+    .uni-card::before {
+      content: ''; position: absolute; top: -50%; right: -20%;
+      width: 400px; height: 400px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .uni-icon-wrap {
+      flex-shrink: 0; width: 80px; height: 80px; border-radius: 12px;
+      background: linear-gradient(135deg,rgba(0,212,255,0.15),rgba(124,58,237,0.15));
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 2.2rem;
+    }
+
+    .uni-info { flex: 1; }
+
+    .uni-name { font-size: 1.4rem; font-weight: 800; line-height: 1.3; margin-bottom: 0.4rem; }
+
+    .uni-location {
+      font-family: 'Space Mono', monospace; font-size: 0.75rem;
+      color: var(--muted); letter-spacing: 0.1em;
+    }
+
+    footer {
+      border-top: 1px solid var(--border); padding: 2rem 3rem;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 1rem;
+    }
+
+    .footer-left, .footer-right {
+      font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--muted);
+    }
+
+    /* REVEAL */
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .dot {
+      position: fixed; border-radius: 50%;
+      animation: floatDot linear infinite; pointer-events: none; z-index: 0;
+    }
+
+    @keyframes floatDot {
+      0%   { transform: translateY(100vh) scale(0); opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 0.6; }
+      100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+    }
+
+    .cursor {
+      display: inline-block; width: 3px; height: 1em;
+      background: var(--accent); vertical-align: middle; margin-left: 4px;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    @media (max-width: 600px) {
+      .uni-card { flex-direction: column; text-align: center; }
+      nav { padding: 1rem 1.2rem; }
+      .tab-btn { padding: 0.8rem 1rem; font-size: 0.8rem; }
+      .viewer-frame, .frame-loading { height: 500px; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="grid-overlay"></div>
+<div id="dots"></div>
+
+<div class="wrapper">
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">
+      <svg viewBox="0 0 28 28" fill="none">
+        <rect x="2"  y="2"  width="10" height="10" rx="2" fill="#00d4ff" opacity="0.9"/>
+        <rect x="16" y="2"  width="10" height="10" rx="2" fill="#7c3aed" opacity="0.9"/>
+        <rect x="2"  y="16" width="10" height="10" rx="2" fill="#10b981" opacity="0.9"/>
+        <rect x="16" y="16" width="10" height="10" rx="2" fill="#00d4ff" opacity="0.5"/>
+      </svg>
+      FCI · TANTA
+    </div>
+    <span class="nav-badge">DATABASE PROJECT</span>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <p class="hero-tag">// Faculty of Computer &amp; Information Sciences</p>
+    <h1 class="hero-title">
+      <span class="line1">Mini Market</span>
+      <span class="line2">Database System<span class="cursor"></span></span>
+    </h1>
+    <p class="hero-subtitle">
+      A relational database model designed for a real-world mini market system —
+      built by students of Tanta University, Faculty of Computer &amp; Information.
+    </p>
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="scrollToViewer('model')">🗃️ View Database Model</button>
+      <button class="btn-secondary" onclick="scrollToViewer('explain')">📖 Read Explanation</button>
+    </div>
+    <div class="hero-chips">
+      <span class="chip chip-blue">SQL</span>
+      <span class="chip chip-purple">Relational DB</span>
+      <span class="chip chip-green">ER Diagram</span>
+      <span class="chip chip-blue">Normalization</span>
+      <span class="chip chip-purple">Data Modeling</span>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- EMBEDDED VIEWER -->
+  <div class="viewer-section" id="viewer">
+    <p class="section-label reveal">// Project Viewer</p>
+    <h2 class="section-title reveal">Explore Directly Here</h2>
+    <p class="section-desc reveal" style="margin-bottom:2rem;">
+      Browse both artifacts without leaving this page — switch between tabs below.
+    </p>
+
+    <div class="tabs reveal">
+      <button class="tab-btn active" id="tab-model" onclick="switchTab('model')">
+        <span class="tab-icon">🗃️</span> Database Model <span class="tab-num">01</span>
+      </button>
+      <button class="tab-btn" id="tab-explain" onclick="switchTab('explain')">
+        <span class="tab-icon">📖</span> Explanation <span class="tab-num">02</span>
+      </button>
+    </div>
+
+    <div class="iframe-wrapper reveal">
+      <div class="iframe-topbar">
+        <div class="iframe-dots">
+          <span class="d1"></span><span class="d2"></span><span class="d3"></span>
+        </div>
+        <div class="iframe-url" id="frame-url">
+          claude.ai › artifacts › Relational Database Model
+        </div>
+        <button class="iframe-reload" onclick="reloadFrame()">↺ Reload</button>
+      </div>
+
+      <div class="frame-loading show" id="frame-loading">
+        <div class="spinner"></div>
+        <div class="loading-text">LOADING ARTIFACT...</div>
+      </div>
+
+      <iframe
+        id="frame-model"
+        class="viewer-frame active"
+        src="https://claude.ai/public/artifacts/e3f9da73-517e-41ba-81ad-6dee44a1fcc0"
+        title="Relational Database Model"
+        onload="onFrameLoad()"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+      ></iframe>
+
+      <iframe
+        id="frame-explain"
+        class="viewer-frame"
+        src=""
+        data-src="https://claude.ai/public/artifacts/fb4dfbbf-ef6e-496b-b473-ab4d3a3fc04e"
+        title="Database Explanation"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+      ></iframe>
+    </div>
+  </div>
+
+  <div class="section-divider"></div>
+
+  <!-- TEAM -->
+  <section>
+    <p class="section-label reveal">// The Team</p>
+    <h2 class="section-title reveal">Meet the Developers</h2>
+    <p class="section-desc reveal">Five students who designed and built this database project from scratch.</p>
+
+    <div class="team-grid">
+      <div class="team-card reveal">
+        <div class="team-avatar av1">BA</div>
+        <div class="team-name">Baraa Ayman</div>
+        <div class="team-role">DB ENGINEER</div>
+      </div>
+      <div class="team-card reveal" style="transition-delay:.1s">
+        <div class="team-avatar av2">MM</div>
+        <div class="team-name">Mostafa Mohamed</div>
+        <div class="team-role">DATA MODELER</div>
+      </div>
+      <div class="team-card reveal" style="transition-delay:.2s">
+        <div class="team-avatar av3">AB</div>
+        <div class="team-name">Adham Bassam</div>
+        <div class="team-role">SCHEMA DESIGNER</div>
+      </div>
+      <div class="team-card reveal" style="transition-delay:.3s">
+        <div class="team-avatar av4">AE</div>
+        <div class="team-name">Ahmed El Badry</div>
+        <div class="team-role">SQL DEVELOPER</div>
+      </div>
+      <div class="team-card reveal" style="transition-delay:.4s">
+        <div class="team-avatar av5">AM</div>
+        <div class="team-name">Abdelrhman Mohamed</div>
+        <div class="team-role">SYSTEM ANALYST</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- UNIVERSITY -->
+  <div class="uni-section">
+    <div class="uni-card reveal">
+      <div class="uni-icon-wrap">🎓</div>
+      <div class="uni-info">
+        <div class="uni-name">Faculty of Computer &amp; Information</div>
+        <div class="uni-name" style="font-size:1.1rem;color:var(--accent);margin-bottom:.5rem;">Tanta University</div>
+        <div class="uni-location">📍 TANTA, EGYPT &nbsp;·&nbsp; DATABASE SYSTEMS COURSE &nbsp;·&nbsp; 2025</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-left">© 2025 FCI TANTA — MINI MARKET DB PROJECT</div>
+    <div class="footer-right">BUILT WITH ❤️ BY 5 STUDENTS</div>
+  </footer>
+</div>
+
+<script>
+  /* Canvas */
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, nodes = [];
+
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+
+  function initNodes() {
+    nodes = [];
+    const count = Math.floor((W * H) / 22000);
+    for (let i = 0; i < count; i++) {
+      nodes.push({
+        x: Math.random()*W, y: Math.random()*H,
+        vx: (Math.random()-.5)*.4, vy: (Math.random()-.5)*.4,
+        r: Math.random()*2.5+1,
+        color: Math.random()<.5 ? '#00d4ff' : '#7c3aed'
+      });
+    }
+  }
+
+  function drawFrame() {
+    ctx.clearRect(0,0,W,H);
+    nodes.forEach(n => {
+      n.x+=n.vx; n.y+=n.vy;
+      if(n.x<0||n.x>W) n.vx*=-1;
+      if(n.y<0||n.y>H) n.vy*=-1;
+    });
+    for(let i=0;i<nodes.length;i++) {
+      for(let j=i+1;j<nodes.length;j++) {
+        const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d<140) {
+          ctx.beginPath();
+          ctx.strokeStyle=`rgba(0,212,255,${(1-d/140)*.25})`;
+          ctx.lineWidth=1;
+          ctx.moveTo(nodes[i].x,nodes[i].y);
+          ctx.lineTo(nodes[j].x,nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    nodes.forEach(n => {
+      ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fillStyle=n.color; ctx.fill();
+    });
+    requestAnimationFrame(drawFrame);
+  }
+
+  resize(); initNodes(); drawFrame();
+  window.addEventListener('resize', ()=>{ resize(); initNodes(); });
+
+  /* Floating dots */
+  const dotsContainer = document.getElementById('dots');
+  ['#00d4ff','#7c3aed','#10b981'].forEach((c,ci) => {
+    for(let i=0;i<6;i++) {
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      const size = Math.random()*5+3;
+      dot.style.cssText=`width:${size}px;height:${size}px;left:${Math.random()*100}vw;background:${c};opacity:0.5;animation-duration:${Math.random()*15+12}s;animation-delay:${Math.random()*10}s;`;
+      dotsContainer.appendChild(dot);
+    }
+  });
+
+  /* Scroll reveal */
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);} });
+  }, {threshold:0.1});
+  document.querySelectorAll('.reveal').forEach(r => obs.observe(r));
+
+  /* Tab switching */
+  let currentTab = 'model';
+  const URLS = {
+    model:   'https://claude.ai/public/artifacts/e3f9da73-517e-41ba-81ad-6dee44a1fcc0',
+    explain: 'https://claude.ai/public/artifacts/fb4dfbbf-ef6e-496b-b473-ab4d3a3fc04e'
+  };
+  const URL_LABELS = {
+    model:   'claude.ai › artifacts › Relational Database Model',
+    explain: 'claude.ai › artifacts › Database Explanation'
+  };
+
+  function switchTab(tab) {
+    if(tab === currentTab) return;
+    currentTab = tab;
+
+    document.getElementById('tab-model').className   = 'tab-btn' + (tab==='model'   ? ' active' : '');
+    document.getElementById('tab-explain').className = 'tab-btn' + (tab==='explain' ? ' active-purple' : '');
+    document.getElementById('frame-url').textContent = URL_LABELS[tab];
+
+    const loading = document.getElementById('frame-loading');
+    loading.classList.add('show');
+    document.querySelectorAll('.viewer-frame').forEach(f => f.classList.remove('active'));
+
+    const frame = document.getElementById('frame-' + tab);
+
+    if(tab === 'explain' && (!frame.src || frame.src === window.location.href || frame.src === '')) {
+      frame.src = frame.dataset.src;
+      frame.onload = () => { loading.classList.remove('show'); frame.classList.add('active'); };
+    } else {
+      frame.classList.add('active');
+      loading.classList.remove('show');
+    }
+  }
+
+  function onFrameLoad() {
+    document.getElementById('frame-loading').classList.remove('show');
+  }
+
+  function reloadFrame() {
+    const loading = document.getElementById('frame-loading');
+    loading.classList.add('show');
+    const f = document.getElementById('frame-' + currentTab);
+    const src = f.src || URLS[currentTab];
+    f.src = '';
+    setTimeout(() => { f.src = src; f.onload = () => loading.classList.remove('show'); }, 150);
+  }
+
+  function scrollToViewer(tab) {
+    switchTab(tab);
+    document.getElementById('viewer').scrollIntoView({behavior:'smooth'});
+  }
+</script>
+</body>
+</html>
